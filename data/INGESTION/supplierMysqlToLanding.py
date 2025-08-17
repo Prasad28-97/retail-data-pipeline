@@ -8,20 +8,20 @@ import json
 spark = SparkSession.builder.appName("supplierMySQLToLanding").getOrCreate()
 
 # Google Cloud Storage (GCS) Configuration variables
-GCS_BUCKET = "retailer-datalake-project-27032025"
+GCS_BUCKET = "retailer-datalake-project-14082025"
 LANDING_PATH = f"gs://{GCS_BUCKET}/landing/supplier-db/"
 ARCHIVE_PATH = f"gs://{GCS_BUCKET}/landing/supplier-db/archive/"
 CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/configs/supplier_config.csv"
 
 # BigQuery Configuration
-BQ_PROJECT = "avd-databricks-demo"
+BQ_PROJECT = "thematic-land-467710-p8"
 BQ_AUDIT_TABLE = f"{BQ_PROJECT}.temp_dataset.audit_log"
 BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
 BQ_TEMP_PATH = f"{GCS_BUCKET}/temp/"  
 
 # MySQL Configuration
 MYSQL_CONFIG = {
-    "url": "jdbc:mysql://34.57.241.120:3306/supplierDB?useSSL=false&allowPublicKeyRetrieval=true",
+    "url": "jdbc:mysql://34.59.153.148:3306/supplierDB?useSSL=false&allowPublicKeyRetrieval=true",
     "driver": "com.mysql.cj.jdbc.Driver",
     "user": "myuser",
     "password": "mypass"
@@ -179,6 +179,7 @@ def extract_and_save_to_landing(table, load_type, watermark_col):
 
 # Main Execution
 config_df = read_config_file()
+
 
 for row in config_df.collect():
     if row["is_active"] == '1':

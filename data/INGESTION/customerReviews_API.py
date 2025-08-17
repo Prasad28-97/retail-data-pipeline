@@ -9,7 +9,7 @@ from google.cloud import storage
 spark = SparkSession.builder.appName("CustomerReviewsAPI").getOrCreate()
 
 # API Endpoint
-API_URL = "https://67e51d5418194932a5849592.mockapi.io/retailer/reviews"
+API_URL = "https://689d6a99ce755fe69788943d.mockapi.io/retailer/reviews"
 
 # Step 1: Fetch data from API
 response = requests.get(API_URL)
