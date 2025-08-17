@@ -18,7 +18,7 @@ WHERE o.is_active = TRUE
 GROUP BY 1, 2, 3, 4, 5;
 
 -----------------------------------------------------------------------------------------------------------
--- 2. Customer Engagement Metrics (customer_engagement)
+-- 2. Customer Engagement Metrics   (customer_engagement)
 
 CREATE TABLE IF NOT EXISTS `thematic-land-467710-p8.gold_dataset.customer_engagement`
 AS
