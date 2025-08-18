@@ -92,7 +92,7 @@ def move_existing_files_to_archive(table):
     for file in existing_files:
         source_blob = storage_client.bucket(GCS_BUCKET).blob(file)
         
-        # Extract Date from File Name (products_27032025.json)
+        # Extract Date from File Name (products_14082025.json)
         date_part = file.split("_")[-1].split(".")[0]
         year, month, day = date_part[-4:], date_part[2:4], date_part[:2]
         
