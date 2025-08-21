@@ -188,28 +188,18 @@
 #===============================================================================================================================
 
 # AIRFLOW DAGS SUBMITTING BEAM JOBS TO DATAFLOW
-
 import airflow
 from airflow import DAG
-from airflow.utils.dates import days_ago
-from airflow.providers.google.cloud.operators.dataflow import DataflowCreatePythonJobOperator
 from datetime import timedelta
+from airflow.utils.dates import days_ago
+from airflow.providers.google.cloud.operators.dataflow import DataflowCreateJobOperator
 
-# -----------------
 # Constants
-# -----------------
 PROJECT_ID = "thematic-land-467710-p8"
 REGION = "us-east1"
-COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"  # your Composer bucket
+BUCKET = "us-central1-demo-composer-603b77d1-bucket"
 
-# GCS paths to Beam scripts
-RETAILER_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/retailerMysqlToLanding_beam.py"
-SUPPLIER_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/supplierToLanding_beam.py"
-REVIEWS_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/customerReviewsApi_beam.py"
-
-# -----------------
-# Default args 
-# -----------------
+# Define default arguments
 ARGS = {
     "owner": "Prasad",
     "start_date": days_ago(1),
@@ -217,68 +207,60 @@ ARGS = {
     "email_on_failure": False,
     "email_on_retry": False,
     "email": ["***@gmail.com"],
+    "email_on_success": False,
     "retries": 1,
-    "retry_delay": timedelta(minutes=5)
+    "retry_delay": timedelta(minutes=5),
 }
 
-# -----------------
-# DAG definition
-# -----------------
 with DAG(
-    dag_id="beam_ingestion_dag",
-    schedule_interval=None,   # trigger manually or from parent_dag
-    description="Ingest data from Cloud SQL/API to GCS using Apache Beam on Dataflow",
+    dag_id="pyspark_dag",
+    schedule_interval=None,
+    description="Run ingestion jobs on Dataflow",
     default_args=ARGS,
-    tags=["dataflow", "beam", "gcs", "ingestion"],
+    catchup=False,
+    tags=["dataflow", "beam", "etl"]
 ) as dag:
 
-    # Task 1: Retailer MySQL → GCS
-    retailer_ingestion = DataflowCreatePythonJobOperator(
-        task_id="retailer_mysql_to_gcs",
-        py_file=RETAILER_SCRIPT,
-        job_name="retailer-to-gcs-{{ ds_nodash }}",
+    # Example: Customer ingestion job
+    customer_ingestion = DataflowCreateJobOperator(
+        task_id="customer_ingestion",
         project_id=PROJECT_ID,
         location=REGION,
+        job_name="customer-ingestion-{{ ds_nodash }}",
+        gcs_location=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
         options={
-            "runner": "DataflowRunner",
-            "project": PROJECT_ID,
-            "region": REGION,
-            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
-            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+            "input": "cloudsql",
+            "output": f"gs://{BUCKET}/landing/retailer-db/customers/",
         },
+        poll_sleep=30,
     )
 
-    # Task 2: Supplier MySQL → GCS
-    supplier_ingestion = DataflowCreatePythonJobOperator(
-        task_id="supplier_mysql_to_gcs",
-        py_file=SUPPLIER_SCRIPT,
-        job_name="supplier-to-gcs-{{ ds_nodash }}",
+    # Example: Supplier ingestion job
+    supplier_ingestion = DataflowCreateJobOperator(
+        task_id="supplier_ingestion",
         project_id=PROJECT_ID,
         location=REGION,
+        job_name="supplier-ingestion-{{ ds_nodash }}",
+        gcs_location=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
         options={
-            "runner": "DataflowRunner",
-            "project": PROJECT_ID,
-            "region": REGION,
-            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
-            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+            "input": "cloudsql",
+            "output": f"gs://{BUCKET}/landing/retailer-db/suppliers/",
         },
+        poll_sleep=30,
     )
 
-    # Task 3: Customer Reviews API → GCS
-    reviews_ingestion = DataflowCreatePythonJobOperator(
-        task_id="customer_reviews_to_gcs",
-        py_file=REVIEWS_SCRIPT,
-        job_name="reviews-to-gcs-{{ ds_nodash }}",
+    # Example: Customer Reviews API ingestion job
+    reviews_ingestion = DataflowCreateJobOperator(
+        task_id="reviews_ingestion",
         project_id=PROJECT_ID,
         location=REGION,
+        job_name="reviews-ingestion-{{ ds_nodash }}",
+        gcs_location=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
         options={
-            "runner": "DataflowRunner",
-            "project": PROJECT_ID,
-            "region": REGION,
-            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
-            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+            "output": f"gs://{BUCKET}/landing/retailer-db/customer-reviews/",
         },
+        poll_sleep=30,
     )
 
-    # Task dependencies
-    retailer_ingestion >> supplier_ingestion >> reviews_ingestion
+    # Define dependencies
+    customer_ingestion >> supplier_ingestion >> reviews_ingestion
