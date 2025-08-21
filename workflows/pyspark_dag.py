@@ -188,18 +188,17 @@
 #===============================================================================================================================
 
 # AIRFLOW DAGS SUBMITTING BEAM JOBS TO DATAFLOW
-import airflow
 from airflow import DAG
 from datetime import timedelta
 from airflow.utils.dates import days_ago
-from airflow.providers.google.cloud.operators.dataflow import DataflowCreateJobOperator
+from airflow.contrib.operators.dataflow_operator import DataflowPythonOperator
 
-# Constants
+# GCP project details
 PROJECT_ID = "thematic-land-467710-p8"
 REGION = "us-east1"
 BUCKET = "us-central1-demo-composer-603b77d1-bucket"
 
-# Define default arguments
+# Default args
 ARGS = {
     "owner": "Prasad",
     "start_date": days_ago(1),
@@ -218,49 +217,52 @@ with DAG(
     description="Run ingestion jobs on Dataflow",
     default_args=ARGS,
     catchup=False,
-    tags=["dataflow", "beam", "etl"]
+    tags=["dataflow", "beam", "etl"],
 ) as dag:
 
-    # Example: Customer ingestion job
-    customer_ingestion = DataflowCreateJobOperator(
+    # Customer ingestion
+    customer_ingestion = DataflowPythonOperator(
         task_id="customer_ingestion",
-        project_id=PROJECT_ID,
-        location=REGION,
-        job_name="customer-ingestion-{{ ds_nodash }}",
-        gcs_location=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
+        py_file=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
         options={
+            "project": PROJECT_ID,
+            "region": REGION,
             "input": "cloudsql",
             "output": f"gs://{BUCKET}/landing/retailer-db/customers/",
         },
+        py_options=[],
+        job_name="customer-ingestion-{{ ds_nodash }}",
         poll_sleep=30,
     )
 
-    # Example: Supplier ingestion job
-    supplier_ingestion = DataflowCreateJobOperator(
+    # Supplier ingestion
+    supplier_ingestion = DataflowPythonOperator(
         task_id="supplier_ingestion",
-        project_id=PROJECT_ID,
-        location=REGION,
-        job_name="supplier-ingestion-{{ ds_nodash }}",
-        gcs_location=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
+        py_file=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
         options={
+            "project": PROJECT_ID,
+            "region": REGION,
             "input": "cloudsql",
             "output": f"gs://{BUCKET}/landing/retailer-db/suppliers/",
         },
+        py_options=[],
+        job_name="supplier-ingestion-{{ ds_nodash }}",
         poll_sleep=30,
     )
 
-    # Example: Customer Reviews API ingestion job
-    reviews_ingestion = DataflowCreateJobOperator(
+    # Customer Reviews ingestion
+    reviews_ingestion = DataflowPythonOperator(
         task_id="reviews_ingestion",
-        project_id=PROJECT_ID,
-        location=REGION,
-        job_name="reviews-ingestion-{{ ds_nodash }}",
-        gcs_location=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
+        py_file=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
         options={
+            "project": PROJECT_ID,
+            "region": REGION,
             "output": f"gs://{BUCKET}/landing/retailer-db/customer-reviews/",
         },
+        py_options=[],
+        job_name="reviews-ingestion-{{ ds_nodash }}",
         poll_sleep=30,
     )
 
-    # Define dependencies
+    # Dependencies
     customer_ingestion >> supplier_ingestion >> reviews_ingestion
