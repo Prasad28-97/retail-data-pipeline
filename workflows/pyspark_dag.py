@@ -208,7 +208,7 @@ SUPPLIER_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/supplierToLanding_beam.py"
 REVIEWS_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/customerReviewsApi_beam.py"
 
 # -----------------
-# Default args
+# Default args 
 # -----------------
 ARGS = {
     "owner": "Prasad",
