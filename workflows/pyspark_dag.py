@@ -85,100 +85,200 @@
 # AIRFLOW DAGS SUBMITTING JOBS TO DATAPROC STANDARD
 
 # # import all modules
+# import airflow
+# from airflow import DAG
+# from datetime import timedelta
+# from airflow.utils.dates import days_ago
+# from airflow.providers.google.cloud.operators.dataproc import (
+#     DataprocStartClusterOperator,
+#     DataprocStopClusterOperator,
+#     DataprocSubmitJobOperator,
+# )
+
+# # define the variables
+# PROJECT_ID = "thematic-land-467710-p8"
+# REGION = "us-east1"
+# CLUSTER_NAME = "my-demo-cluster"
+# COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"
+
+# GCS_JOB_FILE_1 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/retailerMysqlToLanding.py"
+# PYSPARK_JOB_1 = {
+#     "reference": {"project_id": PROJECT_ID},
+#     "placement": {"cluster_name": CLUSTER_NAME},
+#     "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_1},
+# }
+
+# GCS_JOB_FILE_2 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/supplierMysqlToLanding.py"
+# PYSPARK_JOB_2 = {
+#     "reference": {"project_id": PROJECT_ID},
+#     "placement": {"cluster_name": CLUSTER_NAME},
+#     "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_2},
+# }
+
+# GCS_JOB_FILE_3 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/customerReviews_API.py"
+# PYSPARK_JOB_3 = {
+#     "reference": {"project_id": PROJECT_ID},
+#     "placement": {"cluster_name": CLUSTER_NAME},
+#     "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_3},
+# }
+
+
+# ARGS = {
+#     "owner": "Prasad",
+#     "start_date": None,
+#     "depends_on_past": False,
+#     "email_on_failure": False,
+#     "email_on_retry": False,
+#     "email": ["***@gmail.com"],
+#     "email_on_success": False,
+#     "retries": 1,
+#     "retry_delay": timedelta(minutes=5)
+# }
+
+# # define the dag
+# with DAG(
+#     dag_id="pyspark_dag",
+#     schedule_interval=None,
+#     description="DAG to start a Dataproc cluster, run PySpark jobs, and stop the cluster",
+#     default_args=ARGS,
+#     tags=["pyspark", "dataproc", "etl", "marvel"]
+# ) as dag:
+    
+#     # define the Tasks
+#     start_cluster = DataprocStartClusterOperator(
+#         task_id="start_cluster",
+#         project_id=PROJECT_ID,
+#         region=REGION,
+#         cluster_name=CLUSTER_NAME,
+#     )
+
+#     pyspark_task_1 = DataprocSubmitJobOperator(
+#         task_id="pyspark_task_1", 
+#         job=PYSPARK_JOB_1, 
+#         region=REGION, 
+#         project_id=PROJECT_ID
+#     )
+
+#     pyspark_task_2 = DataprocSubmitJobOperator(
+#         task_id="pyspark_task_2", 
+#         job=PYSPARK_JOB_2, 
+#         region=REGION, 
+#         project_id=PROJECT_ID
+#     )
+
+#     pyspark_task_3 = DataprocSubmitJobOperator(
+#         task_id="pyspark_task_3", 
+#         job=PYSPARK_JOB_3, 
+#         region=REGION, 
+#         project_id=PROJECT_ID
+#     )
+
+#     stop_cluster = DataprocStopClusterOperator(
+#         task_id="stop_cluster",
+#         project_id=PROJECT_ID,
+#         region=REGION,
+#         cluster_name=CLUSTER_NAME,
+#     )
+
+# # define the task dependencies
+# start_cluster >> pyspark_task_1 >> pyspark_task_2 >> pyspark_task_3 >> stop_cluster
+
+
+
+#===============================================================================================================================
+
+# AIRFLOW DAGS SUBMITTING BEAM JOBS TO DATAFLOW
+
 import airflow
 from airflow import DAG
-from datetime import timedelta
 from airflow.utils.dates import days_ago
-from airflow.providers.google.cloud.operators.dataproc import (
-    DataprocStartClusterOperator,
-    DataprocStopClusterOperator,
-    DataprocSubmitJobOperator,
-)
+from airflow.providers.google.cloud.operators.dataflow import DataflowCreatePythonJobOperator
+from datetime import timedelta
 
-# define the variables
+# -----------------
+# Constants
+# -----------------
 PROJECT_ID = "thematic-land-467710-p8"
 REGION = "us-east1"
-CLUSTER_NAME = "my-demo-cluster"
-COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"
+COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"  # your Composer bucket
 
-GCS_JOB_FILE_1 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/retailerMysqlToLanding.py"
-PYSPARK_JOB_1 = {
-    "reference": {"project_id": PROJECT_ID},
-    "placement": {"cluster_name": CLUSTER_NAME},
-    "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_1},
-}
+# GCS paths to Beam scripts
+RETAILER_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/retailerMysqlToLanding_beam.py"
+SUPPLIER_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/supplierToLanding_beam.py"
+REVIEWS_SCRIPT = f"gs://{COMPOSER_BUCKET}/beam/customerReviewsApi_beam.py"
 
-GCS_JOB_FILE_2 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/supplierMysqlToLanding.py"
-PYSPARK_JOB_2 = {
-    "reference": {"project_id": PROJECT_ID},
-    "placement": {"cluster_name": CLUSTER_NAME},
-    "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_2},
-}
-
-GCS_JOB_FILE_3 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/customerReviews_API.py"
-PYSPARK_JOB_3 = {
-    "reference": {"project_id": PROJECT_ID},
-    "placement": {"cluster_name": CLUSTER_NAME},
-    "pyspark_job": {"main_python_file_uri": GCS_JOB_FILE_3},
-}
-
-
+# -----------------
+# Default args
+# -----------------
 ARGS = {
     "owner": "Prasad",
-    "start_date": None,
+    "start_date": days_ago(1),
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
     "email": ["***@gmail.com"],
-    "email_on_success": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=5)
 }
 
-# define the dag
+# -----------------
+# DAG definition
+# -----------------
 with DAG(
-    dag_id="pyspark_dag",
-    schedule_interval=None,
-    description="DAG to start a Dataproc cluster, run PySpark jobs, and stop the cluster",
+    dag_id="beam_ingestion_dag",
+    schedule_interval=None,   # trigger manually or from parent_dag
+    description="Ingest data from Cloud SQL/API to GCS using Apache Beam on Dataflow",
     default_args=ARGS,
-    tags=["pyspark", "dataproc", "etl", "marvel"]
+    tags=["dataflow", "beam", "gcs", "ingestion"],
 ) as dag:
-    
-    # define the Tasks
-    start_cluster = DataprocStartClusterOperator(
-        task_id="start_cluster",
+
+    # Task 1: Retailer MySQL → GCS
+    retailer_ingestion = DataflowCreatePythonJobOperator(
+        task_id="retailer_mysql_to_gcs",
+        py_file=RETAILER_SCRIPT,
+        job_name="retailer-to-gcs-{{ ds_nodash }}",
         project_id=PROJECT_ID,
-        region=REGION,
-        cluster_name=CLUSTER_NAME,
+        location=REGION,
+        options={
+            "runner": "DataflowRunner",
+            "project": PROJECT_ID,
+            "region": REGION,
+            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
+            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+        },
     )
 
-    pyspark_task_1 = DataprocSubmitJobOperator(
-        task_id="pyspark_task_1", 
-        job=PYSPARK_JOB_1, 
-        region=REGION, 
-        project_id=PROJECT_ID
-    )
-
-    pyspark_task_2 = DataprocSubmitJobOperator(
-        task_id="pyspark_task_2", 
-        job=PYSPARK_JOB_2, 
-        region=REGION, 
-        project_id=PROJECT_ID
-    )
-
-    pyspark_task_3 = DataprocSubmitJobOperator(
-        task_id="pyspark_task_3", 
-        job=PYSPARK_JOB_3, 
-        region=REGION, 
-        project_id=PROJECT_ID
-    )
-
-    stop_cluster = DataprocStopClusterOperator(
-        task_id="stop_cluster",
+    # Task 2: Supplier MySQL → GCS
+    supplier_ingestion = DataflowCreatePythonJobOperator(
+        task_id="supplier_mysql_to_gcs",
+        py_file=SUPPLIER_SCRIPT,
+        job_name="supplier-to-gcs-{{ ds_nodash }}",
         project_id=PROJECT_ID,
-        region=REGION,
-        cluster_name=CLUSTER_NAME,
+        location=REGION,
+        options={
+            "runner": "DataflowRunner",
+            "project": PROJECT_ID,
+            "region": REGION,
+            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
+            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+        },
     )
 
-# define the task dependencies
-start_cluster >> pyspark_task_1 >> pyspark_task_2 >> pyspark_task_3 >> stop_cluster
+    # Task 3: Customer Reviews API → GCS
+    reviews_ingestion = DataflowCreatePythonJobOperator(
+        task_id="customer_reviews_to_gcs",
+        py_file=REVIEWS_SCRIPT,
+        job_name="reviews-to-gcs-{{ ds_nodash }}",
+        project_id=PROJECT_ID,
+        location=REGION,
+        options={
+            "runner": "DataflowRunner",
+            "project": PROJECT_ID,
+            "region": REGION,
+            "temp_location": f"gs://{COMPOSER_BUCKET}/dataflow/temp",
+            "staging_location": f"gs://{COMPOSER_BUCKET}/dataflow/staging",
+        },
+    )
+
+    # Task dependencies
+    retailer_ingestion >> supplier_ingestion >> reviews_ingestion

@@ -1,44 +1,44 @@
-from pyspark.sql import SparkSession
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
 import requests
 import json
-import pandas as pd
-import datetime
-from google.cloud import storage
 
-# Initialize Spark Session
-spark = SparkSession.builder.appName("CustomerReviewsAPI").getOrCreate()
+class ReadFromAPI(beam.DoFn):
+    def process(self, element, api_url):
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                for record in data:
+                    yield record
+            else:
+                yield data
+        else:
+            raise Exception(f"API call failed with status {response.status_code}")
 
-# API Endpoint
-API_URL = "https://689d6a99ce755fe69788943d.mockapi.io/retailer/reviews"
+def run():
+    options = PipelineOptions(
+        runner='DataflowRunner',
+        project='thematic-land-467710-p8',
+        region='us-east1',
+        temp_location='gs://us-central1-demo-composer-603b77d1-bucket/temp',
+        job_name='customer-reviews-api'
+    )
 
-# Step 1: Fetch data from API 
-response = requests.get(API_URL)
+    with beam.Pipeline(options=options) as p:
+        (
+            p
+            | "Start" >> beam.Create([None])
+            | "Read API" >> beam.ParDo(
+                ReadFromAPI(),
+                api_url="https://api.example.com/customerReviews"   # ✅ Replace with actual API
+            )
+            | "To JSON" >> beam.Map(json.dumps)
+            | "Write to GCS" >> beam.io.WriteToText(
+                "gs://us-central1-demo-composer-603b77d1-bucket/landing/retailer-db/customer-reviews/reviews",
+                file_name_suffix=".json"
+            )
+        )
 
-if response.status_code == 200:
-    data = response.json()
-    print(f"✅ Successfully fetched {len(data)} records.")
-else:
-    print(f"❌ Failed to fetch data. Status Code: {response.status_code}")
-    exit()
-    
-# Step 2: Convert API Data to Pandas DataFrame
-df_pandas = pd.DataFrame(data)
-
-# Step 3: Get Current Date for File Naming
-today = datetime.datetime.today().strftime('%Y%m%d')  # Format: YYYYMMDD
-
-# Step 4: Define File Paths with Date
-local_parquet_file = f"/tmp/customer_reviews_{today}.parquet"
-GCS_BUCKET = "retailer-datalake-project-14082025"
-GCS_PATH = f"landing/customer_reviews/customer_reviews_{today}.parquet"
-
-# Step 5: Save Pandas DataFrame as Parquet Locally
-df_pandas.to_parquet(local_parquet_file, index=False)
-
-# Step 6: Upload Parquet File to GCS
-storage_client = storage.Client()
-bucket = storage_client.bucket(GCS_BUCKET)
-blob = bucket.blob(GCS_PATH)
-blob.upload_from_filename(local_parquet_file)
-
-print(f"✅ Data successfully written to gs://{GCS_BUCKET}/{GCS_PATH}")
+if __name__ == "__main__":
+    run()
