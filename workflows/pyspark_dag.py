@@ -3,76 +3,76 @@
 
 
 # workflows/pyspark_dag.py
-# from datetime import timedelta
-# from airflow import DAG
-# from airflow.utils.dates import days_ago
-# from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatchOperator
+from datetime import timedelta
+from airflow import DAG
+from airflow.utils.dates import days_ago
+from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatchOperator
 
-# PROJECT_ID = "thematic-land-467710-p8"
-# REGION = "us-east1"
-# COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"
+PROJECT_ID = "thematic-land-467710-p8"
+REGION = "us-east1"
+COMPOSER_BUCKET = "us-central1-demo-composer-603b77d1-bucket"
 
-# GCS_JOB_FILE_1 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/retailerMysqlToLanding.py"
-# GCS_JOB_FILE_2 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/supplierMysqlToLanding.py"
-# GCS_JOB_FILE_3 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/customerReviews_API.py"
+GCS_JOB_FILE_1 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/retailerMysqlToLanding.py"
+GCS_JOB_FILE_2 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/supplierMysqlToLanding.py"
+GCS_JOB_FILE_3 = f"gs://{COMPOSER_BUCKET}/data/INGESTION/customerReviews_API.py"
 
-# RUNTIME_CONFIG = {
-#     "version": "1.1",
-#     "properties": {
-#         "spark.executor.instances": "2",
-#         "spark.executor.cores": "4",
-#         "spark.executor.memory": "4g",
-#         "spark.driver.cores": "4",
-#         "spark.driver.memory": "4g",
-#     },
-# }
+RUNTIME_CONFIG = {
+    "version": "1.1",
+    "properties": {
+        "spark.executor.instances": "2",
+        "spark.executor.cores": "4",
+        "spark.executor.memory": "4g",
+        "spark.driver.cores": "4",
+        "spark.driver.memory": "4g",
+    },
+}
 
-# default_args = {
-#     "owner": "Prasad",
-#     "retries": 1,
-#     "retry_delay": timedelta(minutes=5),
-# }
+default_args = {
+    "owner": "Prasad",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
 
-# with DAG(
-#     dag_id="pyspark_dag",
-#     description="PySpark ingestion via Dataproc Serverless",
-#     default_args=default_args,
-#     start_date=days_ago(1),
-#     schedule_interval=None,
-#     catchup=False,
-# ) as dag:
+with DAG(
+    dag_id="pyspark_dag",
+    description="PySpark ingestion via Dataproc Serverless",
+    default_args=default_args,
+    start_date=days_ago(1),
+    schedule_interval=None,
+    catchup=False,
+) as dag:
 
-#     def make_batch(main_py_uri: str) -> dict:
-#         return {
-#             "pyspark_batch": {"main_python_file_uri": main_py_uri},
-#             "runtime_config": RUNTIME_CONFIG,
-#         }
+    def make_batch(main_py_uri: str) -> dict:
+        return {
+            "pyspark_batch": {"main_python_file_uri": main_py_uri},
+            "runtime_config": RUNTIME_CONFIG,
+        }
 
-#     task1 = DataprocCreateBatchOperator(
-#         task_id="pyspark_task_1",
-#         project_id=PROJECT_ID,
-#         region=REGION,
-#         batch_id="pyspark-task-1-{{ ds_nodash }}",
-#         batch=make_batch(GCS_JOB_FILE_1),
-#     )
+    task1 = DataprocCreateBatchOperator(
+        task_id="pyspark_task_1",
+        project_id=PROJECT_ID,
+        region=REGION,
+        batch_id="pyspark-task-1-{{ ds_nodash }}",
+        batch=make_batch(GCS_JOB_FILE_1),
+    )
 
-#     task2 = DataprocCreateBatchOperator(
-#         task_id="pyspark_task_2",
-#         project_id=PROJECT_ID,
-#         region=REGION,
-#         batch_id="pyspark-task-2-{{ ds_nodash }}",
-#         batch=make_batch(GCS_JOB_FILE_2),
-#     )
+    task2 = DataprocCreateBatchOperator(
+        task_id="pyspark_task_2",
+        project_id=PROJECT_ID,
+        region=REGION,
+        batch_id="pyspark-task-2-{{ ds_nodash }}",
+        batch=make_batch(GCS_JOB_FILE_2),
+    )
 
-#     task3 = DataprocCreateBatchOperator(
-#         task_id="pyspark_task_3",
-#         project_id=PROJECT_ID,
-#         region=REGION,
-#         batch_id="pyspark-task-3-{{ ds_nodash }}",
-#         batch=make_batch(GCS_JOB_FILE_3),
-#     )
+    task3 = DataprocCreateBatchOperator(
+        task_id="pyspark_task_3",
+        project_id=PROJECT_ID,
+        region=REGION,
+        batch_id="pyspark-task-3-{{ ds_nodash }}",
+        batch=make_batch(GCS_JOB_FILE_3),
+    )
 
-#     task1 >> task2 >> task3
+    task1 >> task2 >> task3
 
 
 
@@ -188,81 +188,81 @@
 #===============================================================================================================================
 
 # AIRFLOW DAGS SUBMITTING BEAM JOBS TO DATAFLOW
-from airflow import DAG
-from datetime import timedelta
-from airflow.utils.dates import days_ago
-from airflow.contrib.operators.dataflow_operator import DataflowPythonOperator
+# from airflow import DAG
+# from datetime import timedelta
+# from airflow.utils.dates import days_ago
+# from airflow.contrib.operators.dataflow_operator import DataflowPythonOperator
 
-# GCP project details
-PROJECT_ID = "thematic-land-467710-p8"
-REGION = "us-east1"
-BUCKET = "us-central1-demo-composer-603b77d1-bucket"
+# # GCP project details
+# PROJECT_ID = "thematic-land-467710-p8"
+# REGION = "us-east1"
+# BUCKET = "us-central1-demo-composer-603b77d1-bucket"
 
-# Default args
-ARGS = {
-    "owner": "Prasad",
-    "start_date": days_ago(1),
-    "depends_on_past": False,
-    "email_on_failure": False,
-    "email_on_retry": False,
-    "email": ["***@gmail.com"],
-    "email_on_success": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
-}
+# # Default args
+# ARGS = {
+#     "owner": "Prasad",
+#     "start_date": days_ago(1),
+#     "depends_on_past": False,
+#     "email_on_failure": False,
+#     "email_on_retry": False,
+#     "email": ["***@gmail.com"],
+#     "email_on_success": False,
+#     "retries": 1,
+#     "retry_delay": timedelta(minutes=5),
+# }
 
-with DAG(
-    dag_id="pyspark_dag",
-    schedule_interval=None,
-    description="Run ingestion jobs on Dataflow",
-    default_args=ARGS,
-    catchup=False,
-    tags=["dataflow", "beam", "etl"],
-) as dag:
+# with DAG(
+#     dag_id="pyspark_dag",
+#     schedule_interval=None,
+#     description="Run ingestion jobs on Dataflow",
+#     default_args=ARGS,
+#     catchup=False,
+#     tags=["dataflow", "beam", "etl"],
+# ) as dag:
 
-    # Customer ingestion
-    customer_ingestion = DataflowPythonOperator(
-        task_id="customer_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "input": "cloudsql",
-            "output": f"gs://{BUCKET}/landing/retailer-db/customers/",
-        },
-        py_options=[],
-        job_name="customer-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
-    )
+#     # Customer ingestion
+#     customer_ingestion = DataflowPythonOperator(
+#         task_id="customer_ingestion",
+#         py_file=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
+#         options={
+#             "project": PROJECT_ID,
+#             "region": REGION,
+#             "input": "cloudsql",
+#             "output": f"gs://{BUCKET}/landing/retailer-db/customers/",
+#         },
+#         py_options=[],
+#         job_name="customer-ingestion-{{ ds_nodash }}",
+#         poll_sleep=30,
+#     )
 
-    # Supplier ingestion
-    supplier_ingestion = DataflowPythonOperator(
-        task_id="supplier_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "input": "cloudsql",
-            "output": f"gs://{BUCKET}/landing/retailer-db/suppliers/",
-        },
-        py_options=[],
-        job_name="supplier-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
-    )
+#     # Supplier ingestion
+#     supplier_ingestion = DataflowPythonOperator(
+#         task_id="supplier_ingestion",
+#         py_file=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
+#         options={
+#             "project": PROJECT_ID,
+#             "region": REGION,
+#             "input": "cloudsql",
+#             "output": f"gs://{BUCKET}/landing/retailer-db/suppliers/",
+#         },
+#         py_options=[],
+#         job_name="supplier-ingestion-{{ ds_nodash }}",
+#         poll_sleep=30,
+#     )
 
-    # Customer Reviews ingestion
-    reviews_ingestion = DataflowPythonOperator(
-        task_id="reviews_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "output": f"gs://{BUCKET}/landing/retailer-db/customer-reviews/",
-        },
-        py_options=[],
-        job_name="reviews-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
-    )
+#     # Customer Reviews ingestion
+#     reviews_ingestion = DataflowPythonOperator(
+#         task_id="reviews_ingestion",
+#         py_file=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
+#         options={
+#             "project": PROJECT_ID,
+#             "region": REGION,
+#             "output": f"gs://{BUCKET}/landing/retailer-db/customer-reviews/",
+#         },
+#         py_options=[],
+#         job_name="reviews-ingestion-{{ ds_nodash }}",
+#         poll_sleep=30,
+#     )
 
-    # Dependencies
-    customer_ingestion >> supplier_ingestion >> reviews_ingestion
+#     # Dependencies
+#     customer_ingestion >> supplier_ingestion >> reviews_ingestion
