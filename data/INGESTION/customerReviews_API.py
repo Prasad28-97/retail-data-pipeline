@@ -21,7 +21,7 @@ def run():
         runner='DataflowRunner',
         project='thematic-land-467710-p8',
         region='us-east1',
-        temp_location='gs://us-central1-demo-composer-603b77d1-bucket/temp',
+        temp_location='gs://retailer-datalake-project-14082025/temp',
         job_name='customer-reviews-api'
     )
 
@@ -31,11 +31,11 @@ def run():
             | "Start" >> beam.Create([None])
             | "Read API" >> beam.ParDo(
                 ReadFromAPI(),
-                api_url="https://api.example.com/customerReviews"   # ✅ Replace with actual API
+                api_url="https://689d6a99ce755fe69788943d.mockapi.io/retailer/reviews"   # ✅ Replace with actual API
             )
             | "To JSON" >> beam.Map(json.dumps)
             | "Write to GCS" >> beam.io.WriteToText(
-                "gs://us-central1-demo-composer-603b77d1-bucket/landing/retailer-db/customer-reviews/reviews",
+                "gs://retailer-datalake-project-14082025/landing/retailer-db/customer-reviews/reviews",
                 file_name_suffix=".json"
             )
         )

@@ -188,81 +188,84 @@
 #===============================================================================================================================
 
 # AIRFLOW DAGS SUBMITTING BEAM JOBS TO DATAFLOW
-from airflow import DAG
-from datetime import timedelta
-from airflow.utils.dates import days_ago
-from airflow.contrib.operators.dataflow_operator import DataflowPythonOperator
 
-# GCP project details
-PROJECT_ID = "thematic-land-467710-p8"
-REGION = "us-east1"
-BUCKET = "us-central1-demo-composer-603b77d1-bucket"
+from airflow import DAG
+from airflow.utils.dates import days_ago
+from airflow.providers.apache.beam.operators.beam import BeamRunPythonPipelineOperator
+from airflow.providers.apache.beam.hooks.beam import BeamRunnerType
 
 # Default args
 ARGS = {
-    "owner": "Prasad",
-    "start_date": days_ago(1),
+    "owner": "airflow",
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "email": ["***@gmail.com"],
-    "email_on_success": False,
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
 }
+
+# GCS paths to your scripts
+GCS_JOB_FILE_1 = "gs://us-central1-training-12345-bucket/data/INGESTION/retailerMysqlToLanding.py"
+GCS_JOB_FILE_2 = "gs://us-central1-training-12345-bucket/data/INGESTION/supplierMysqlToLanding.py"
+GCS_JOB_FILE_3 = "gs://us-central1-training-12345-bucket/data/INGESTION/customerReviews_API.py"
+
+# Common configs
+LOCATION = "us-central1"
+PY_REQUIREMENTS = ["apache-beam[gcp]==2.59.0"]
 
 with DAG(
     dag_id="pyspark_dag",
-    schedule_interval=None,
-    description="Run ingestion jobs on Dataflow",
+    schedule_interval="0 5 * * *",
+    description="DAG to run multiple Apache Beam jobs on Dataflow",
     default_args=ARGS,
+    start_date=days_ago(1),
     catchup=False,
-    tags=["dataflow", "beam", "etl"],
+    tags=["beam", "dataflow", "etl", "alpha team"],
 ) as dag:
 
-    # Customer ingestion
-    customer_ingestion = DataflowPythonOperator(
-        task_id="customer_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/customerToLanding.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "input": "cloudsql",
-            "output": f"gs://{BUCKET}/landing/retailer-db/customers/",
-        },
+    retailer_job = BeamRunPythonPipelineOperator(
+        task_id="retailer_job",
+        runner=BeamRunnerType.DataflowRunner,
+        py_file=GCS_JOB_FILE_1,
         py_options=[],
-        job_name="customer-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
+        pipeline_options={},
+        py_requirements=PY_REQUIREMENTS,
+        py_interpreter="python3",
+        py_system_site_packages=False,
+        dataflow_config={
+            "location": LOCATION,
+            "job_name": "retailer_job_{{ ds_nodash }}",
+        },
     )
 
-    # Supplier ingestion
-    supplier_ingestion = DataflowPythonOperator(
-        task_id="supplier_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/supplierToLanding.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "input": "cloudsql",
-            "output": f"gs://{BUCKET}/landing/retailer-db/suppliers/",
-        },
+    supplier_job = BeamRunPythonPipelineOperator(
+        task_id="supplier_job",
+        runner=BeamRunnerType.DataflowRunner,
+        py_file=GCS_JOB_FILE_2,
         py_options=[],
-        job_name="supplier-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
+        pipeline_options={},
+        py_requirements=PY_REQUIREMENTS,
+        py_interpreter="python3",
+        py_system_site_packages=False,
+        dataflow_config={
+            "location": LOCATION,
+            "job_name": "supplier_job_{{ ds_nodash }}",
+        },
     )
 
-    # Customer Reviews ingestion
-    reviews_ingestion = DataflowPythonOperator(
-        task_id="reviews_ingestion",
-        py_file=f"gs://{BUCKET}/dags/ingestion/customerReviewsApi.py",
-        options={
-            "project": PROJECT_ID,
-            "region": REGION,
-            "output": f"gs://{BUCKET}/landing/retailer-db/customer-reviews/",
-        },
+    customer_reviews_job = BeamRunPythonPipelineOperator(
+        task_id="customer_reviews_job",
+        runner=BeamRunnerType.DataflowRunner,
+        py_file=GCS_JOB_FILE_3,
         py_options=[],
-        job_name="reviews-ingestion-{{ ds_nodash }}",
-        poll_sleep=30,
+        pipeline_options={},
+        py_requirements=PY_REQUIREMENTS,
+        py_interpreter="python3",
+        py_system_site_packages=False,
+        dataflow_config={
+            "location": LOCATION,
+            "job_name": "customer_reviews_job_{{ ds_nodash }}",
+        },
     )
 
-    # Dependencies
-    customer_ingestion >> supplier_ingestion >> reviews_ingestion
+    # Run jobs sequentially (can change to parallel if required)
+    retailer_job >> supplier_job >> customer_reviews_job

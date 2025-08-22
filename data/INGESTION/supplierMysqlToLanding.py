@@ -22,7 +22,7 @@ def run():
         runner='DataflowRunner',
         project='thematic-land-467710-p8',
         region='us-east1',
-        temp_location='gs://us-central1-demo-composer-603b77d1-bucket/temp',
+        temp_location='gs://retailer-datalake-project-14082025/temp',
         job_name='supplier-to-landing'
     )
 
@@ -40,7 +40,7 @@ def run():
             )
             | "To JSON" >> beam.Map(json.dumps)
             | "Write to GCS" >> beam.io.WriteToText(
-                "gs://us-central1-demo-composer-603b77d1-bucket/landing/retailer-db/suppliers/suppliers",
+                "gs://retailer-datalake-project-14082025/landing/retailer-db/suppliers/suppliers",
                 file_name_suffix=".json"
             )
         )
